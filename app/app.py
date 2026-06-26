@@ -18,7 +18,7 @@ class LinuxConsoleEdit(QPlainTextEdit):
         self.setReadOnly(True)
         
         # 2. Atur Font menjadi Monospace (khas Terminal)
-        font = QFont("Courier New", 11)  # Bisa juga menggunakan "Consolas" atau "Monospace"
+        font = QFont("Courier New", 9)  # Bisa juga menggunakan "Consolas" atau "Monospace"
         font.setStyleHint(QFont.StyleHint.Monospace)
         self.setFont(font)
         
@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         # Tab default bawaan app (bukan dari mod)
         home = QLabel("Selamat datang! Mod aktif muncul sebagai tab baru.")
         home.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        home.setMinimumHeight(100)
         
         log = LinuxConsoleEdit()
         

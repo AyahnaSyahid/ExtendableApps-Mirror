@@ -34,18 +34,40 @@ class PluginAPI:
 
     # --- Menu ---
     def add_menu_action(self, menu_title: str, action_label: str, callback: Callable):
-        """Tambahkan item menu ke menubar."""
+        """Tambahkan item menu ke menubar dengan dukungan nested/sub-menu."""
         from PySide6.QtGui import QAction
-        menu: Optional[QMenu] = None
-        for action in self._menubar.actions():
-            if action.text() == menu_title:
-                menu = cast(Optional[QMenu], action.menu())
-                break
-        if menu is None:
-            menu = self._menubar.addMenu(menu_title)
+        
+        # 1. Pecah menu_title berdasarkan karakter '/'
+        # Contoh: "File/Export/PDF" -> ['File', 'Export', 'PDF']
+        menu_titles = [title.strip() for title in menu_title.split('/') if title.strip()]
+        
+        if not menu_titles:
+            return
+
+        # 2. Mulai pencarian/pembuatan dari menubar utama
+        current_container = self._menubar
+        
+        for title in menu_titles:
+            found_menu: Optional[QMenu] = None
+            
+            # Cari apakah menu dengan teks tersebut sudah ada di container saat ini
+            for action in current_container.actions():
+                if action.text() == title and action.menu():
+                    found_menu = cast(QMenu, action.menu())
+                    break
+            
+            # Jika belum ada, buat menu baru
+            if found_menu is None:
+                found_menu = current_container.addMenu(title)
+                
+            # Geser kontainer saat ini ke menu yang baru ditemukan/dibuat untuk iterasi berikutnya
+            current_container = found_menu
+
+        # 3. Setelah loop selesai, current_container berada di level paling dalam (QMenu)
+        # Tinggal tambahkan QAction terakhir ke menu tersebut
         act = QAction(action_label, self._menubar)
         act.triggered.connect(callback)
-        menu.addAction(act)
+        current_container.addAction(act)
     
     # --- Mod Handler ---
     def register_handler(self, mod_id, raw_handler):
