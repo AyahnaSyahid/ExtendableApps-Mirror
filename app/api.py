@@ -15,6 +15,7 @@ class PluginAPI:
         self._menubar = menubar
         self._listeners: dict[str, list[Callable]] = {}
         self.app_name = app_name
+        self._mod_handler = {}
 
     # --- Widget ---
     def add_tab(self, widget, label: str):
@@ -45,3 +46,14 @@ class PluginAPI:
         act = QAction(action_label, self._menubar)
         act.triggered.connect(callback)
         menu.addAction(act)
+    
+    # --- Mod Handler ---
+    def register_handler(self, mod_id, raw_handler):
+        if mod_id in self._mod_handler.keys():
+            print(f"[Mod Handler : {mod_id}] Tertimpah...")
+        self._mod_handler[mod_id] = raw_handler
+
+    def get_handler(self, mod_id):
+        if mod_id in self._mod_handler.keys():
+            print(f"[Mod Handler : {mod_id}] Tertimpah...")
+        self._mod_handler.get(mod_id, None)
