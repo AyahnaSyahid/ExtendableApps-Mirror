@@ -36,7 +36,9 @@ def load_all_mods(mods_dir: str | Path, api: PluginAPI):
             if not hasattr(module, "setup"):
                 raise AttributeError(f"Mod '{mod_id}' tidak punya fungsi setup(api)")
 
+            api.set_current_mod(mod_id)
             module.setup(api)
+            api.set_current_mod("")
             loaded.append(mod_name)
             print(f"[ModLoader] ✓ {mod_name} ({mod_id})")
             api.register_handler(mod_name, module)

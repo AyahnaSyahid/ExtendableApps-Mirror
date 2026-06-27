@@ -16,6 +16,7 @@ class PluginAPI:
         self._listeners: dict[str, list[Callable]] = {}
         self.app_name = app_name
         self._mod_handler = {}
+        self._current_mod_name = ""
 
     # --- Widget ---
     def add_tab(self, widget, label: str):
@@ -31,6 +32,13 @@ class PluginAPI:
         """Kirim event ke semua listener yang terdaftar."""
         for cb in self._listeners.get(event_name, []):
             cb(data)
+
+    # --- current mod loading only set within loader ---
+    def set_current_mod(self, name):
+        self._current_mod_name = name
+    
+    def current_mod_id(self):
+        return self._current_mod_name
 
     # --- Menu ---
     def add_menu_action(self, menu_title: str, action_label: str, callback: Callable):

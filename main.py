@@ -8,4 +8,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 from app.app import main
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
     main()
