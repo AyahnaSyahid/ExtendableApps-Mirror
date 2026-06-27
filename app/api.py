@@ -4,24 +4,46 @@ Mod tidak pernah import dari myapp.core secara langsung.
 """
 from __future__ import annotations
 from typing import Callable, TYPE_CHECKING, Optional, cast
+from pathlib import Path
+from PySide6.QtCore import Qt, QSettings
+from PySide6.QtWidgets import QDockWidget
 
 if TYPE_CHECKING:
-    from PySide6.QtWidgets import QTabWidget, QMenuBar, QMenu
-
+    from PySide6.QtWidgets import QTabWidget, QMenuBar, QMenu, QMainWindow, QWidget
+    from PySide6.QtSql import QSqlDatabase
 
 class PluginAPI:
-    def __init__(self, tabs: "QTabWidget", menubar: "QMenuBar", app_name: str):
+    def __init__(self, main: "QMainWindow", tabs: "QTabWidget", menubar: "QMenuBar", app_name: str):
+        self._mainwindow = main
         self._tabs = tabs
         self._menubar = menubar
         self._listeners: dict[str, list[Callable]] = {}
         self.app_name = app_name
         self._mod_handler = {}
         self._current_mod_name = ""
+        QSettings.setDefaultFormat(QSettings.Format.IniFormat)
+        self._settings = QSettings(main)
+        self._settings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(Path(__file__).parent.parent))
+        self._database = {}
 
     # --- Widget ---
     def add_tab(self, widget, label: str):
         """Tambahkan tab baru ke jendela utama."""
         self._tabs.addTab(widget, label)
+
+
+    def add_dock(self, widget: QWidget, title = "", menu_toggle = "Dockable", toggle_action_label="", area: Qt.DockWidgetArea = Qt.DockWidgetArea.AllDockWidgetAreas):
+        dock = QDockWidget(self._mainwindow)
+        dock.setWidget(widget)
+        self._mainwindow.addDockWidget(area, dock)
+        toggle_action = dock.toggleViewAction()
+        if toggle_action_label != "":
+            toggle_action.setText(toggle_action_label)
+        if title != "":
+            dock.setWindowTitle(title)
+        else:
+            dock.setWindowTitle(widget.windowTitle())
+        self.add_menu_action(menu_toggle, toggle_action_label, None)
 
     # --- Events ---
     def on_event(self, event_name: str, callback: Callable):
@@ -41,7 +63,7 @@ class PluginAPI:
         return self._current_mod_name
 
     # --- Menu ---
-    def add_menu_action(self, menu_title: str, action_label: str, callback: Callable):
+    def add_menu_action(self, menu_title: str, action_label: str, callback: Optional[Callable]):
         """Tambahkan item menu ke menubar dengan dukungan nested/sub-menu."""
         from PySide6.QtGui import QAction
         
@@ -74,7 +96,8 @@ class PluginAPI:
         # 3. Setelah loop selesai, current_container berada di level paling dalam (QMenu)
         # Tinggal tambahkan QAction terakhir ke menu tersebut
         act = QAction(action_label, self._menubar)
-        act.triggered.connect(callback)
+        if callback:
+            act.triggered.connect(callback)
         current_container.addAction(act)
     
     # --- Mod Handler ---
@@ -87,3 +110,15 @@ class PluginAPI:
         if mod_id in self._mod_handler.keys():
             print(f"[Mod Handler : {mod_id}] Tertimpah...")
         self._mod_handler.get(mod_id, None)
+    
+    def register_database(self, connection: QSqlDatabase):
+        if not self._current_mod_name:
+            raise RuntimeError("Register database must be called from mods")
+        self._database[self._current_mod_name] = connection
+    
+    def get_database_connection(self, mod_name):
+        return self._database.get(mod_name, None)
+    
+    @staticmethod
+    def data_dir():
+        return Path(__file__).parent.parent / "data"

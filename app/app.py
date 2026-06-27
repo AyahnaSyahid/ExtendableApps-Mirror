@@ -4,7 +4,7 @@ Core Application — jendela utama. Mod tidak perlu tahu file ini.
 import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QLabel, QSplitter, QPlainTextEdit
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot, QSettings
 from PySide6.QtGui import QFont, QPalette, QColor
 
 from app.api import PluginAPI
@@ -55,7 +55,8 @@ class MainWindow(QMainWindow):
         home.setMinimumHeight(100)
         
         log = LinuxConsoleEdit()
-        
+        log.clear()
+        self.log = log
         split = QSplitter(Qt.Orientation.Vertical)
         split.addWidget(home)
         split.addWidget(log)
@@ -64,6 +65,7 @@ class MainWindow(QMainWindow):
 
         # Buat API dan load semua mod
         api = PluginAPI(
+            main=self,
             tabs=self.tabs,
             menubar=self.menuBar(),
             app_name="ModApp",
@@ -77,6 +79,11 @@ class MainWindow(QMainWindow):
         if errors:
             msg += f", {len(errors)} gagal"
         self.statusBar().showMessage(msg)
+
+    @Slot()
+    def clearConsole(self):
+        self.log.clear()
+
 
 def main():
     app = QApplication(sys.argv)

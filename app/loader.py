@@ -10,6 +10,9 @@ from app.api import PluginAPI
 
 def load_all_mods(mods_dir: str | Path, api: PluginAPI):
     mods_dir = Path(mods_dir)
+    data_dir = mods_dir.parent / "data"
+    if not data_dir.exists():
+        data_dir.mkdir(parents=True, exist_ok=True)
     loaded = []
     errors = []
 
