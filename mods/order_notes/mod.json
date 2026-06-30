@@ -1,0 +1,7 @@
+{
+    "id": "order_notes",
+    "name": "Pencatat Order",
+    "version": "1.0.0",
+    "author": "Noer Holis K",
+    "description": "Mencatat Order-in Klien dan Order-Out ke percetakan/perorangan"
+}
