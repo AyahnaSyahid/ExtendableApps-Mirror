@@ -9,9 +9,8 @@ class OrderNotesWidget(QWidget):
         self.setupUi()
     
     def setupUi(self):
-        widget = QWidget()
-
-        view = QTableView(widget)
-        model = QSqlQueryModel(widget)
+        view = QTableView(self)
+        model = QSqlQueryModel(self)
+        
 
         
