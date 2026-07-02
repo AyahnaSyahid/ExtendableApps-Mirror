@@ -1,5 +1,8 @@
-from PySide6.QtSql import QSql, QSqlDatabase, QSqlQuery
+from PySide6.QtSql import QSql, QSqlDatabase, QSqlQuery, QSqlRecord
 from PySide6.QtCore import Qt, Signal, Slot, QObject
+
+from .contact import BaseContact
+from .tablemanager import TableManager
 
 _QUERIES = {}
 
@@ -11,28 +14,20 @@ CREATE TABLE IF NOT EXISTS client (
     phone_number TEXT );
 '''
 
-class Client:
-    def __init__(self, name, address, phone):
-        self.name = name
-        self.id = 0
-        self.address = address
-        self.phone_number = phone
+class Client(BaseContact):
+    def __init__(self):
+        super().__init__()
 
-class ClientManager(QObject):
-    con: QSqlDatabase = QSqlDatabase()
-    error = Signal(str)
 
-    def __init__(self, con: QSqlDatabase, parent: QObject | None):
-        super().__init__(parent)
+class ClientManager(TableManager):
+
+    def __init__(self, con: QSqlDatabase, parent = None):
+        super().__init__(con, parent)
         self.setObjectName("clientManager")
-        self._default_con = con
 
-    def init_schema(self):
+    def _real_init(self):
         '''Initalize Schema'''
-        con: QSqlDatabase = ClientManager.con
-        if not con.open():
-            self.error.emit('Database gagal dibuka')
-            return False
+        con = self.con_
         q = QSqlQuery(con)
         if not q.exec(_QUERIES['create']):
             self.error.emit('Inisialisasi skema gagal')
@@ -40,23 +35,24 @@ class ClientManager(QObject):
         # Jika suatu hari ada update schema maka update disini
         return True
 
+    def client_from_record(self, rec: QSqlRecord):
+        cl = Client()
+        cl.id_ = rec.value('id') or 0
+        cl.name = rec.value('name') or ""
+        cl.address = rec.value('address') or ""
+        cl.phone_number = rec.value('phone_number') or ""
+        return cl
+
     def client_from_id(self, cid):
-        q = QSqlQuery(self._default_con)
+        q = QSqlQuery(self.con_)
         q.prepare('SELECT * FROM client WHERE id = :id')
         q.bindValue(':id', cid)
         if q.exec() and q.next():
-            cl = Client(q.value('name'), q.value('address'), q.value('phone_number'))
-            cl.id = cid
-            return cid
-        return None
-
+            return self.client_from_record(q.record())
+    
     def client_from_name(self, name):
-        q = QSqlQuery(self._default_con)
+        q = QSqlQuery(self.con_)
         q.prepare('SELECT * FROM client WHERE name = :name')
         q.bindValue(':name', name)
         if q.exec() and q.next():
-            cl = Client(q.value('name'), q.value('address'), q.value('phone_number'))
-            cl.id = q.value('id')
-            return cl
-        return None
-    
+            return self.client_from_record(q.record())
