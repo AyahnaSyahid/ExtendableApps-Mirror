@@ -31,8 +31,10 @@ class PrintingCompanyManager(TableManager):
             return False
         return True
 
-    def printingCompany_from_record(self, rec):
+    def printingCompany_from_record(self, rec: QSqlRecord):
         pc = PrintingCompany()
+        if rec.isEmpty():
+            return pc 
         pc.id_ = rec.value('id')
         pc.name = rec.value('name')
         pc.address = rec.value('address')
@@ -45,3 +47,5 @@ class PrintingCompanyManager(TableManager):
         q.bindValue(':id_', pcid)
         if q.exec() and q.next():
             return self.printingCompany_from_record(q.record())
+        return PrintingCompany()
+    

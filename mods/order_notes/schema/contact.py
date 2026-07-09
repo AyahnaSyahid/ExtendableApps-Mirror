@@ -3,4 +3,3 @@ class BaseContact:
     name = ''
     address = ''
     phone_number = ''
-

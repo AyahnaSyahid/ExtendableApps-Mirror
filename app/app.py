@@ -71,6 +71,8 @@ class MainWindow(QMainWindow):
             app_name="ModApp",
         )
 
+        self.api = api
+
         mods_path = Path(__file__).parent.parent / "mods"
         loaded, errors = load_all_mods(mods_path, api)
 
@@ -83,6 +85,10 @@ class MainWindow(QMainWindow):
     @Slot()
     def clearConsole(self):
         self.log.clear()
+
+    def closeEvent(self, event):
+        self.api.close_all_databases()
+        super().closeEvent(event)
 
 
 def main():

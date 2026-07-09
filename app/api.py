@@ -8,6 +8,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QDockWidget
 
+from app.services.database import DatabaseService, MigrationFunc
+
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QTabWidget, QMenuBar, QMenu, QMainWindow, QWidget
     from PySide6.QtSql import QSqlDatabase
@@ -24,7 +26,7 @@ class PluginAPI:
         QSettings.setDefaultFormat(QSettings.Format.IniFormat)
         self._settings = QSettings(main)
         self._settings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(Path(__file__).parent.parent))
-        self._database = {}
+        self._db_service = DatabaseService(self.data_dir())
 
     # --- Widget ---
     def add_tab(self, widget, label: str):
@@ -111,14 +113,28 @@ class PluginAPI:
             print(f"[Mod Handler : {mod_id}] Tertimpah...")
         self._mod_handler.get(mod_id, None)
     
-    def register_database(self, connection: QSqlDatabase):
+    def init_database(self, migrations: list[MigrationFunc], schema_version: int = 1) -> QSqlDatabase:
+        """Dipanggil sekali oleh mod di setup(api). Mod hanya menyediakan daftar
+        fungsi migrasi (create table, alter table, dst); path file dan penamaan
+        koneksi sepenuhnya ditangani di sini, mod tidak perlu tahu."""
         if not self._current_mod_name:
-            raise RuntimeError("Register database must be called from mods")
-        self._database[self._current_mod_name] = connection
-    
-    def get_database_connection(self, mod_name):
-        return self._database.get(mod_name, None)
-    
+            raise RuntimeError("init_database harus dipanggil dari dalam setup(api) milik mod")
+        return self._db_service.init_database(self._current_mod_name, migrations, schema_version)
+
+    def get_database_connection(self, mod_id: str | None = None) -> QSqlDatabase:
+        """Ambil koneksi database milik sebuah mod. Jika mod_id tidak diisi,
+        dipakai mod yang sedang aktif (hanya valid saat dipanggil dari dalam
+        setup()). Aman dipanggil dari thread mana pun setelah init_database
+        dijalankan — koneksi per-thread dibuat otomatis di belakang layar."""
+        target = mod_id or self._current_mod_name
+        if not target:
+            raise RuntimeError("get_database_connection butuh mod_id, atau dipanggil dari konteks mod")
+        return self._db_service.get_connection(target)
+
+    def close_all_databases(self):
+        """Dipanggil sekali oleh core saat aplikasi ditutup."""
+        self._db_service.close_all()
+
     @staticmethod
     def data_dir():
         return Path(__file__).parent.parent / "data"
