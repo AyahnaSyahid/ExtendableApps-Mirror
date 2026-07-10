@@ -4,7 +4,7 @@ Core Application — jendela utama. Mod tidak perlu tahu file ini.
 import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QLabel, QSplitter, QPlainTextEdit
-from PySide6.QtCore import Qt, Slot, QSettings, Signal, QTimer
+from PySide6.QtCore import Qt, Slot, QSettings, Signal, QTimer, QLocale
 from PySide6.QtGui import QFont, QPalette, QColor
 
 from app.api import PluginAPI
@@ -100,8 +100,12 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    locInd = QLocale(QLocale.Language.Indonesian, QLocale.Country.Indonesia)
+    QLocale.setDefault(locInd)
+
     win = MainWindow()
     win.show()
+    
     sys.exit(app.exec())
 
 
