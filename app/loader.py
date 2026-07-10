@@ -43,13 +43,13 @@ def load_all_mods(mods_dir: str | Path, api: PluginAPI):
             module.setup(api)
             api.set_current_mod("")
             loaded.append(mod_name)
-            print(f"[ModLoader] ✓ {mod_name} ({mod_id})")
+            api.sendLog(f"[ModLoader] ✓ {mod_name} ({mod_id})")
             api.register_handler(mod_name, module)
             
         except Exception as e:
             import traceback
             errors.append((mod_name, str(e)))
-            print(f"[ModLoader] ✗ {mod_name}: {e}")
+            api.sendLog(f"[ModLoader] ✗ {mod_name}: {e}")
             traceback.print_exc()
     
     return loaded, errors

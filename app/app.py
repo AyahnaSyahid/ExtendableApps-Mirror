@@ -4,7 +4,7 @@ Core Application — jendela utama. Mod tidak perlu tahu file ini.
 import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QLabel, QSplitter, QPlainTextEdit
-from PySide6.QtCore import Qt, Slot, QSettings
+from PySide6.QtCore import Qt, Slot, QSettings, Signal, QTimer
 from PySide6.QtGui import QFont, QPalette, QColor
 
 from app.api import PluginAPI
@@ -37,9 +37,10 @@ class LinuxConsoleEdit(QPlainTextEdit):
         
         # 4. Menghilangkan frame bawaan agar terlihat lebih clean (opsional)
         self.setFrameShape(QPlainTextEdit.Shape.NoFrame)
-        self.appendPlainText("Ini dari bawaan")
 
 class MainWindow(QMainWindow):
+    sendLog = Signal(str)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ModApp")
@@ -50,16 +51,17 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         # Tab default bawaan app (bukan dari mod)
-        home = QLabel("Selamat datang! Mod aktif muncul sebagai tab baru.")
+        home = QLabel("Halo Developer saya !!")
         home.setAlignment(Qt.AlignmentFlag.AlignCenter)
         home.setMinimumHeight(100)
         
-        log = LinuxConsoleEdit()
-        log.clear()
-        self.log = log
+        console = LinuxConsoleEdit(self)
+        console.setObjectName("console")
+        self.sendLog.connect(console.appendPlainText)
+        self.console = console
         split = QSplitter(Qt.Orientation.Vertical)
         split.addWidget(home)
-        split.addWidget(log)
+        split.addWidget(console)
         
         self.tabs.addTab(split, "Home")
 
@@ -72,24 +74,29 @@ class MainWindow(QMainWindow):
         )
 
         self.api = api
+        tmr = QTimer.singleShot(0, self._initialize_all_mods)
 
+    @Slot()
+    def _initialize_all_mods(self):
         mods_path = Path(__file__).parent.parent / "mods"
-        loaded, errors = load_all_mods(mods_path, api)
-
+        loaded, errors = load_all_mods(mods_path, self.api)
         # Tampilkan status di status bar
         msg = f"{len(loaded)} mod aktif"
         if errors:
             msg += f", {len(errors)} gagal"
         self.statusBar().showMessage(msg)
 
+
     @Slot()
     def clearConsole(self):
-        self.log.clear()
+        self.console.clear()
 
     def closeEvent(self, event):
         self.api.close_all_databases()
         super().closeEvent(event)
 
+    def log(self, msg: str):
+        self.sendLog.emit(msg)
 
 def main():
     app = QApplication(sys.argv)
