@@ -1,17 +1,11 @@
 from app.api import PluginAPI
-from PySide6.QtWidgets import QWidget
-from PySide6.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
-from PySide6.QtCore import Qt, QDate, QTime, QDateTime
+from PySide6.QtSql import QSqlDatabase, QSqlQuery
+from PySide6.QtCore import Qt
+from .absensimingguan import AbsensiWidget
 
 import logging
 
 logger = logging.getLogger(__name__)
-
-class AbsenData:
-    user = ''
-    sign_date: QDateTime = QDateTime()
-    time_in: QTime = QTime()
-    time_out: QTime = QTime()
 
 def _migrate_v0(con: QSqlDatabase):
     if not con.open():
@@ -38,4 +32,5 @@ CREATE TABLE IF NOT EXISTS absensi (
 
 def setup(api: PluginAPI):
     con = api.init_database([_migrate_v0])
-    
+    awg = AbsensiWidget(con)
+    api.add_dock(awg, "Absensi", toggle_action_label="Absensi", area=Qt.DockWidgetArea.LeftDockWidgetArea)
