@@ -109,7 +109,7 @@ class ModDatabaseHandle:
         for name in list(self._connections.values()):
             if QSqlDatabase.contains(name):
                 QSqlDatabase.database(name).close()
-                QSqlDatabase.removeDatabase(name)
+                # QSqlDatabase.removeDatabase(name)
         self._connections.clear()
 
 
