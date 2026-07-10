@@ -25,8 +25,8 @@ def _migrate_v0(con: QSqlDatabase):
 CREATE TABLE IF NOT EXISTS absensi (
     user TEXT NOT NULL COLLATE NOCASE,
     sign_date TEXT NOT NULL,
-    time_in TEXT NOT NULL DEFAULT '08:00:00',
-    time_out TEXT NOT NULL DEFAULT '16:00:00',
+    time_in TEXT NOT NULL DEFAULT '08:00',
+    time_out TEXT NOT NULL DEFAULT '16:00',
     CONSTRAINT unique_user_date UNIQUE (user, sign_date)
 )
 '''
