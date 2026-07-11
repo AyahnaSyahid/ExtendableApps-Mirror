@@ -5,8 +5,10 @@ from PySide6.QtWidgets import (
     QComboBox, QSpinBox, QFormLayout,
     QMessageBox
 )
-
-from PySide6.QtCore import QLocale, QModelIndex, QTime, QTimeZone, Qt, QSortFilterProxyModel, QObject, Slot, QPoint, QDate, QDateTime
+from PySide6.QtGui import QColor, QBrush
+from PySide6.QtCore import (
+    QLocale,
+    QModelIndex, QTime, QTimeZone, Qt, QSortFilterProxyModel, QObject, Slot, QPoint, QDate, QDateTime)
 from PySide6.QtSql import QSql, QSqlDatabase, QSqlQuery, QSqlQueryModel, QSqlTableModel
 
 import logging
@@ -16,6 +18,11 @@ class CounterViewDelegate(QStyledItemDelegate):
     
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
+        self._colorNameDict = {"C":"Cyan", "M":"Magenta", "Y":"Yellow", "K":"Black"}
+        self._bgColor = {"C": QColor.fromCmykF(1, 0, 0, 0),
+                         "M": QColor.fromCmykF(0, 1, 0, 0),
+                         "Y": QColor.fromCmykF(0, 0, 1, 0), 
+                         "K": QColor.fromCmykF(0, 0, 0, 1)}
     
     def initStyleOption(self, option: QStyleOptionViewItem, index: QModelIndex):
         super().initStyleOption(option, index)
@@ -26,6 +33,14 @@ class CounterViewDelegate(QStyledItemDelegate):
             option.text = QLocale().toString(index.data())
         else:
             option.displayAlignment = Qt.AlignmentFlag.AlignCenter
+        if column == 3:
+            idata = index.data()
+            option.text = self._colorNameDict[idata]
+            option.backgroundBrush = QBrush(self._bgColor[idata])
+            if idata == "K":
+                palette = option.palette
+                palette.setColor(palette.ColorRole.Text, QColor.fromRgb(255, 255, 255))
+                option.palette = palette
 
 
 class DialogAddDataCounter(QDialog):
