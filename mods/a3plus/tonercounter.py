@@ -202,6 +202,7 @@ class TonerCounterWidget(QWidget):
         cv.customContextMenuRequested.connect(self.counterContextMenu)
         cv.setVerticalScrollMode(cv.ScrollMode.ScrollPerPixel)
         cv.setHorizontalScrollMode(cv.ScrollMode.ScrollPerPixel)
+        cv.setFrameShape(cv.Shape.NoFrame)
 
         self._table_model = QSqlTableModel(self, con)
         tm = self._table_model
@@ -232,9 +233,17 @@ class TonerCounterWidget(QWidget):
 
         cv.hideColumn(0)
         cv.setSortingEnabled(True)
+        cv.verticalHeader().hide()
         mainLayout = QVBoxLayout(self)
         mainLayout.addWidget(cv)
         self.setLayout(mainLayout)
+        
+        margins = mainLayout.contentsMargins()
+        margins.setLeft(0)
+        margins.setRight(0)
+        margins.setBottom(0)
+        mainLayout.setContentsMargins(margins)
+        
         cv.resizeColumnsToContents()
 
     @Slot()
