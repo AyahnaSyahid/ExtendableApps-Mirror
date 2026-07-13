@@ -26,6 +26,7 @@ def _migrate_v2(con: QSqlDatabase):
 
 
 from .tonercounter import TonerCounterWidget
+from . import partreplacementcounter
 from .partreplacementcounter import PartReplacementCounterWidget
 from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout
 
@@ -41,7 +42,8 @@ def setup(api: PluginAPI):
     
     tw = TonerCounterWidget(con)
     tabWidget.addTab(tw,"Toner Counter")
-
+    
+    partreplacementcounter.API = api
     prc = PartReplacementCounterWidget(con)    
     tabWidget.addTab(prc, "Penggantian Part")
 

@@ -1,15 +1,17 @@
 from __future__ import annotations
-from PySide6.QtWidgets import QComboBox, QDateEdit, QFormLayout, QHBoxLayout, QMessageBox, QSpinBox, QTableView, QTreeView, QVBoxLayout, QWidget, QMenu, QDialog
+from PySide6.QtWidgets import QComboBox, QDateEdit, QFormLayout, QHBoxLayout, QMessageBox, QPushButton, QSpinBox, QTableView, QTreeView, QVBoxLayout, QWidget, QMenu, QDialog
 from PySide6.QtSql import QSqlDatabase, QSqlTableModel, QSqlQuery
-from PySide6.QtCore import QDate, Qt, Slot, QPoint, QSortFilterProxyModel
+from PySide6.QtCore import QDate, QModelIndex, Qt, Slot, QPoint, QSortFilterProxyModel
 from PySide6.QtGui import QAction
 from app.libs.json_tree_model_qt import JsonTreeItem, JsonTreeModel, ItemEditorDialog
+from app.libs.json_to_text_tree import json_to_text_tree
+from app.api import PluginAPI
 
 import logging
 logger = logging.getLogger(__name__)
 
 TABLE_NAME = "a3_part_replacement"
-
+API: PluginAPi | None = None
 
 class AddReplacementCounterDataDialog(QDialog):
 
@@ -26,11 +28,14 @@ class AddReplacementCounterDataDialog(QDialog):
         self.comboInstaller.addItems(installers)
         self.dateEdit = QDateEdit(QDate.currentDate(), self)
         self.dateEdit.setDisplayFormat("dd MMMM yyyy")
-        self.dateEdit.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.dateEdit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.dateEdit.setCalendarPopup(True)
         self.counterBox = QSpinBox(
-            self, minimum=0, maximum=9_999_999, singleStep=1000)
+            self, minimum=lastCounter, maximum=9_999_999, singleStep=1000)
         self.counterBox.setValue(lastCounter)
         self.counterBox.setAccelerated(True)
+        self.counterBox.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.counterBox.setButtonSymbols(self.counterBox.ButtonSymbols.NoButtons)
 
         tree = self.extraInfoTree = QTreeView(self)
         self.extraInfoModel = JsonTreeModel(parent=self)
@@ -49,6 +54,10 @@ class AddReplacementCounterDataDialog(QDialog):
         vl = QVBoxLayout()
         vl.addWidget(_form)
         vl.addWidget(self.extraInfoTree)
+
+        button = QPushButton("Simpan", self)
+        vl.addWidget(button, alignment=Qt.AlignRight)
+        button.clicked.connect(self.simpanClicked)
 
         self.setLayout(vl)
 
@@ -150,6 +159,34 @@ class AddReplacementCounterDataDialog(QDialog):
             if proceed == QMessageBox.Yes:
                 model.remove_item(index)        
 
+    @Slot()
+    def simpanClicked(self):
+        if self.comboPart.currentText() == '' or \
+           self.comboInstaller.currentText() == '':
+            QMessageBox.warning(self, "Periksa input", "Nama Part dan Penginstall harus diisi")
+            return;
+        if self.counterBox.value() <= self.counterBox.minimum():
+            QMessageBox.warning(self, "Periksa Input", "Belum menentukan counter\natau Counter sama dengan sebelumnya")
+            return;
+        self.dialogResult = {'part_name': self.comboPart.currentText(), 
+                             'installer': self.comboInstaller.currentText(),
+                             'counter':   self.counterBox.value(),
+                             'install_date': self.dateEdit.date().toString("yyyy-MM-dd"),
+                             'ext_info':  self.extraInfoModel.to_json(True)}
+        self.accept()
+
+
+class ReplacementCounterDataProxy(QSortFilterProxyModel):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def data(self, index: QModelIndex = QModelIndex(), role=Qt.DisplayRole):
+        if index.isValid() and role == Qt.ItemDataRole.ToolTipRole:
+            lines = [txt for txt in json_to_text_tree(index.data)]
+            return "\n".join(lines)
+        return super().data(index, role)
+
 
 class PartReplacementCounterWidget(QWidget):
     _completionData = None
@@ -167,9 +204,18 @@ class PartReplacementCounterWidget(QWidget):
         _model.setTable(TABLE_NAME)
         _model.select()
 
-        _proxy = self._proxy = QSortFilterProxyModel(self)
+        _proxy = self._proxy = ReplacementCounterDataProxy(self)
         _proxy.setSourceModel(_model)
         rv.setModel(_proxy)
+        _proxy.setHeaderData(0, Qt.Horizontal, "ID", Qt.DisplayRole)
+        _proxy.setHeaderData(1, Qt.Horizontal, "Part", Qt.DisplayRole)
+        _proxy.setHeaderData(2, Qt.Horizontal, "Tanggal", Qt.DisplayRole)
+        _proxy.setHeaderData(3, Qt.Horizontal, "Oleh", Qt.DisplayRole)
+        _proxy.setHeaderData(4, Qt.Horizontal, "Counter", Qt.DisplayRole)
+        _proxy.setHeaderData(5, Qt.Horizontal, "Info", Qt.DisplayRole)
+
+        rv.hideColumn(0)
+        rv.hideColumn(5)
 
         self.setLayout(QHBoxLayout())
         lay = self.layout()
@@ -216,4 +262,22 @@ class PartReplacementCounterWidget(QWidget):
             lastCounter=self._completionData['lastCounter'],
             partNames=self._completionData['parts'],
             installers=self._completionData['installers'])
-        dialog.exec()
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.dialogResult
+            self._save_data(data)
+    
+    @Slot(object)
+    def _save_data(self, data: dict):
+        q = QSqlQuery(self._db)
+        q.prepare(f"INSERT INTO {TABLE_NAME} ( "
+                  "part_name, install_date, installer, counter_fullcolor_value, description) "
+                  "VALUES (:pn, :insd, :insl, :ctr, :desc)")
+        q.bindValue(":pn", data["part_name"])
+        q.bindValue(":insd", data["install_date"])
+        q.bindValue(":insl", data["installer"])
+        q.bindValue(":ctr", data["counter"])
+        q.bindValue(":desc", data["ext_info"])
+
+        if not q.exec():
+            QMessageBox.warning(self, "Gagal menambahkan data", q.lastError().text())
+     
