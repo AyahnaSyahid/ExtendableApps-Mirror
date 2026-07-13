@@ -280,4 +280,6 @@ class PartReplacementCounterWidget(QWidget):
 
         if not q.exec():
             QMessageBox.warning(self, "Gagal menambahkan data", q.lastError().text())
+            return
+        self._model.select()
      

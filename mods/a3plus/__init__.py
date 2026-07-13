@@ -35,11 +35,11 @@ def setup(api: PluginAPI):
     con = api.init_database([_migrate_v1, _migrate_v2], 2)
     container = QWidget()
     container.setObjectName("a3plus_container")
-    container.setLayout(QVBoxLayout())
-    container_layout = container.layout()
+
+    container_layout = QVBoxLayout()
     tabWidget = QTabWidget(container)
     container_layout.addWidget(tabWidget)
-    
+
     tw = TonerCounterWidget(con)
     tabWidget.addTab(tw,"Toner Counter")
     
@@ -47,4 +47,6 @@ def setup(api: PluginAPI):
     prc = PartReplacementCounterWidget(con)    
     tabWidget.addTab(prc, "Penggantian Part")
 
+    container.setLayout(container_layout)
+    
     api.add_tab(container, "A3Plus Data")

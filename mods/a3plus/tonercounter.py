@@ -28,11 +28,13 @@ class CounterViewDelegate(QStyledItemDelegate):
         super().initStyleOption(option, index)
         column = index.column()
         if column == 6:
-            option.displayAlignment = Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight
+            option.displayAlignment = Qt.AlignmentFlag.AlignRight
             # option.text = f'{index.data():,}'
             option.text = QLocale().toString(index.data())
+        elif column == 2:
+            option.displayAlignment = Qt.AlignmentFlag.AlignLeft
         else:
-            option.displayAlignment = Qt.AlignmentFlag.AlignCenter
+            option.displayAlignment = Qt.AlignmentFlag.AlignHCenter
         if column == 3:
             idata = index.data()
             option.text = self._colorNameDict[idata]
@@ -203,6 +205,7 @@ class TonerCounterWidget(QWidget):
         cv.setVerticalScrollMode(cv.ScrollMode.ScrollPerPixel)
         cv.setHorizontalScrollMode(cv.ScrollMode.ScrollPerPixel)
         cv.setFrameShape(cv.Shape.NoFrame)
+        cv.horizontalHeader().setStretchLastSection(True)
 
         self._table_model = QSqlTableModel(self, con)
         tm = self._table_model

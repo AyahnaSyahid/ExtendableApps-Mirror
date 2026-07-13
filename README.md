@@ -1,93 +1,107 @@
 # ExtendableApps
 
+Kerangka aplikasi desktop berbasis Python yang dirancang untuk **mudah dikembangkan lewat sistem plugin (mod)**. Inti aplikasi dijaga tetap kecil — semua fitur ditambahkan sebagai modul terpisah yang dimuat otomatis saat aplikasi berjalan, tanpa perlu mengubah kode inti sama sekali.
 
+Dibangun dengan [PySide6](https://doc.qt.io/qtforpython/) (Qt for Python) sebagai UI toolkit dan SQLite (via `QtSql`) sebagai penyimpanan data per-modul.
 
-## Getting started
+## Fitur Utama
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **Arsitektur mod/plugin** — setiap fitur adalah folder mandiri di dalam `mods/`, dikenali lewat manifest `mod.json`, dan dimuat otomatis tanpa perlu didaftarkan manual di kode inti.
+- **Isolasi kegagalan** — jika satu mod gagal dimuat, mod lain tetap berjalan normal; error dicatat ke log, bukan menghentikan aplikasi.
+- **Plugin API terpusat** (`app/api.py`) — satu-satunya jalur resmi bagi mod untuk berinteraksi dengan jendela utama:
+  - `add_tab()` — menambahkan tab baru
+  - `add_dock()` — menambahkan panel dockable beserta toggle action di menu
+  - `add_menu_action()` — menambahkan item menu, mendukung submenu bertingkat (`"File/Export/PDF"`)
+  - `on_event()` / `emit_event()` — komunikasi antar-mod berbasis event, tanpa saling bergantung langsung
+  - `sendLog()` — mengirim log ke konsol bawaan aplikasi
+- **Database otomatis per mod** (`app/services/database.py`):
+  - Satu file SQLite per mod, disimpan otomatis di folder `data/`
+  - Sistem migrasi skema dengan pelacakan versi (tabel `meta`), migrasi hanya dijalankan sekali
+  - Koneksi *thread-safe* — mod yang butuh akses database dari thread lain otomatis mendapat koneksi baru yang menunjuk ke file fisik yang sama
+  - Mode `WAL` aktif secara default agar baca/tulis bisa berjalan bersamaan
+- **Konsol log bawaan** — tampilan mirip terminal (hitam-hijau) di tab Home untuk memantau aktivitas semua mod secara real-time.
+- **Locale Indonesia** sebagai default aplikasi.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Struktur Proyek
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/lonedev3/ExtendableApps.git
-git branch -M main
-git push -uf origin main
+ExtendableApps/
+├── main.py                  # Entry point (python main.py)
+├── app/
+│   ├── app.py                # Jendela utama (MainWindow) & bootstrap aplikasi
+│   ├── api.py                 # PluginAPI — kontrak resmi antara core dan mod
+│   ├── loader.py               # Mod loader — scan & jalankan setup(api) tiap mod
+│   └── services/
+│       └── database.py          # DatabaseService — manajemen koneksi & migrasi SQLite per mod
+└── mods/
+    ├── a3plus/                 # Toner counter & pencatatan penggantian part
+    ├── absensi_personal/        # Pencatat absensi harian pribadi
+    ├── order_notes/              # Pencatat order klien & percetakan
+    └── corelautomation/           # Integrasi automasi CorelDraw (Windows, via win32com)
 ```
 
-## Integrate with your tools
+## Instalasi
 
-* [Set up project integrations](https://gitlab.com/lonedev3/ExtendableApps/-/settings/integrations)
+Prasyarat: Python 3.10+ dan PySide6.
 
-## Collaborate with your team
+```bash
+git clone https://github.com/AyahnaSyahid/ExtendableApps-Mirror.git
+cd ExtendableApps-Mirror
+pip install PySide6
+python main.py
+```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+> Catatan: mod `corelautomation` opsional dan hanya aktif penuh di Windows dengan CorelDraw + `pywin32` terpasang. Di platform lain, mod ini tetap dimuat tapi fitur automasinya akan menampilkan peringatan modul tidak ditemukan.
 
-## Test and Deploy
+## Membuat Mod Baru
 
-Use the built-in continuous integration in GitLab.
+Setiap mod minimal terdiri dari dua file:
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```
+mods/nama_mod_anda/
+├── mod.json          # Metadata: id, name, version, author, description
+└── __init__.py        # Wajib punya fungsi setup(api: PluginAPI)
+```
 
-***
+Contoh `mod.json`:
 
-# Editing this README
+```json
+{
+    "id": "mod_saya",
+    "name": "Mod Contoh",
+    "version": "1.0.0",
+    "author": "Nama Anda",
+    "description": "Deskripsi singkat mod ini"
+}
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Contoh `__init__.py` minimal dengan database:
 
-## Suggestions for a good README
+```python
+from app.api import PluginAPI
+from PySide6.QtSql import QSqlDatabase, QSqlQuery
+from PySide6.QtWidgets import QLabel
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+def _migrate_v1(con: QSqlDatabase) -> bool:
+    q = QSqlQuery(con)
+    return q.exec("CREATE TABLE IF NOT EXISTS data (id INTEGER PRIMARY KEY, value TEXT)")
 
-## Name
-Choose a self-explaining name for your project.
+def setup(api: PluginAPI):
+    con = api.init_database([_migrate_v1], schema_version=1)
+    api.add_tab(QLabel("Halo dari mod saya!"), "Mod Saya")
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Simpan folder tersebut di dalam `mods/`, jalankan ulang aplikasi — mod akan otomatis terdeteksi dan dimuat oleh `loader.py`.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## Lisensi
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Proyek ini dirilis di bawah lisensi **[GNU General Public License v3.0](LICENSE)**.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Ini berarti:
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+- Bebas digunakan, dimodifikasi, dan didistribusikan ulang, termasuk untuk keperluan komersial.
+- Jika kamu mendistribusikan versi modifikasi, source code-nya wajib tetap dibuka dengan lisensi yang sama (GPL-3.0).
+- Notice hak cipta & lisensi asli wajib dipertahankan di setiap salinan/turunan.
+- Tidak ada jaminan (warranty) apa pun atas perangkat lunak ini.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Lihat file [`LICENSE`](LICENSE) untuk teks lengkapnya.
